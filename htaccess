@@ -1,0 +1,72 @@
+# ======================================================================
+# 1. FORȚARE HTTPS (Securitate trafic)
+# Redirecționează tot traficul HTTP către HTTPS automat
+# ======================================================================
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{HTTPS} off
+    RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
+
+# ======================================================================
+# 2. BLOCARE ACCES LA FIȘIERE ȘI DIRECTOARE SENSIBILE
+# ======================================================================
+# Dezactivează listarea fișierelor dintr-un folder (ex: /media/)
+Options -Indexes
+
+# Protejează fișierele de configurare, loguri și baze de date exportate
+<FilesMatch "(?i)(\.ini|\.log|\.sql|\.bak|\.swp|\.env)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Ascunde complet folderul /includes/ de la accesul web direct
+# (Fișierele PHP vor funcționa în continuare prin include/require intern)
+<IfModule mod_rewrite.c>
+    RewriteRule ^includes/(.*)$ - [F,L]
+</IfModule>
+
+# Protejează însuși fișierul .htaccess
+<Files .htaccess>
+    Order allow,deny
+    Deny from all
+</Files>
+
+# ======================================================================
+# 3. HEADERE DE SECURITATE (Protecție XSS, Clickjacking)
+# ======================================================================
+<IfModule mod_headers.c>
+    # Previne încărcarea CRM-ului tău într-un iFrame pe alt site (Clickjacking)
+    Header set X-Frame-Options "SAMEORIGIN"
+    
+    # Oprește browserul din a ghici tipul fișierelor (previne atacuri MIME-sniffing)
+    Header set X-Content-Type-Options "nosniff"
+    
+    # Activează protecția anti-XSS nativă a browserului
+    Header set X-XSS-Protection "1; mode=block"
+    
+    # Nu trimite referer-ul complet când ieși de pe site (ex: click pe link de WhatsApp)
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# ======================================================================
+# 4. OPȚIONAL: PROTECȚIE SESIUNI PHP (Doar dacă serverul permite)
+# ======================================================================
+<IfModule mod_php.c>
+    # Asigură-te că cookie-urile de sesiune nu pot fi citite prin JavaScript
+    php_flag session.cookie_httponly on
+    # Trimite cookie-urile de sesiune doar prin conexiune securizată
+    php_flag session.cookie_secure on
+</IfModule>
+
+# ======================================================================
+# 5. CACHING PENTRU RESURSE STATICE (Viteza de încărcare)
+# ======================================================================
+<IfModule mod_expires.c>
+    ExpiresActive On
+    # Păstrează imaginile (precum logo-ul) în memoria browserului 1 lună
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/svg+xml "access plus 1 month"
+    ExpiresByType image/gif "access plus 1 month"
+</IfModule>
